@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 657f829ffb09d1e4aa2fb2ae3c5ced2d
+guid: c9d0cc5882327cb438ff9fa6299ee3f3
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -46,7 +46,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteBorder: {x: 40, y: 40, z: 40, w: 40}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -94,5 +94,5 @@ AssetOrigin:
   productId: 182139
   packageName: Dark Flat Fullscreen GUI / UI Kit - over 650 PNG!
   packageVersion: 1.0
-  assetPath: Assets/HONETi/fullscreen_gui/icons/128x128/arrow_up_01.png
+  assetPath: Assets/HONETi/fullscreen_gui/panels/toggle_frame_check.png
   uploadId: 399200
