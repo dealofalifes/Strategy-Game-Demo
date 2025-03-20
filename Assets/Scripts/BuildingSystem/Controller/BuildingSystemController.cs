@@ -90,7 +90,11 @@ public class BuildingSystemController : MonoBehaviour, IBuildingSystem
                 buildingPoints.Add(new Vector2Int(x, y));
 
         if (hasDoor)
-            buildingPoints.Add(Helper.FindDoorPosForBarrack(corner, productionModel));
+        {
+            Vector2Int doorPoss = Helper.FindDoorPosForBarrack(corner, productionModel);
+            _GridSystem.GetGridElementViewByPosition(doorPoss).EndState(GridElementState.BarrackDoor);
+            buildingPoints.Add(doorPoss);
+        }
 
         _GridSystem.SetGridsFree(buildingPoints);
     }

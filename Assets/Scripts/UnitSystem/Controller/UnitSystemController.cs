@@ -2,7 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Unity.VisualScripting;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 public class UnitSystemController : MonoBehaviour, IUnitSystem
 {
@@ -183,8 +185,58 @@ public class UnitSystemController : MonoBehaviour, IUnitSystem
         _View.OnGridChanged(_MySoldiers);
     }
 
-    public void OnStepStart()
-    {
+    public void OnStepStart(List<GridElementView> _path, UnitElementView _currentView, GridElementView _target)
+    {        
+        List<GridElementView> calPath = new();
+        foreach (var item in _path)
+            calPath.Add(item);
+
+        int priority = _currentView.transform.GetSiblingIndex(); //Only lower priority will change the path.
+        bool needRepath = false;
+        foreach (var item in calPath)
+        {
+            Vector2Int currentPos = new(item.GetData().Get_X(), item.GetData().Get_Y());
+            if (currentPos != _currentView.GetPosition())
+            {
+                foreach (Transform unit in _View.GetUnitElementsContent())
+                {
+                    if (unit.gameObject.activeSelf)
+                    {
+                        if(unit.GetSiblingIndex() > priority)
+                        {
+                            Vector2Int unitPos = unit.GetComponent<UnitElementView>().GetUnitElementModelData().GetCurrentPosition();
+                            if (unitPos == currentPos)
+                            {
+                                needRepath = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!_GridSystem.IsValidGrid(currentPos))
+            {
+                needRepath = true;
+                break;
+            }
+        }
+
+        if (needRepath && _target != null)
+        {
+            foreach (var item in _path)
+                item.EndState(GridElementState.OnNavigation);
+
+            Vector2Int start = _currentView.GetUnitElementModelData().GetCurrentPosition();
+            GridElementView startGridElement = _GridSystem.GetGridElementViewByPosition(start);
+            List<GridElementView> path = _NavigationSystem.FindPath(startGridElement, _target);
+
+            foreach (var item in path)
+                item.SetNewState(GridElementState.OnNavigation);
+
+            _currentView.SetNewPath(path);
+        }
+        
         _GridSystem.OnRechecktoPlaceBuilding();
     }
 
@@ -222,8 +274,9 @@ public class UnitSystemController : MonoBehaviour, IUnitSystem
                 if (_GridSystem.GetGridElementViewByPosition(item).IsOccupied())
                     continue;
 
-                if (!IsValidGrid(item))
-                    continue;
+                if (currentUnit.GetPosition() != item)
+                    if (!IsValidGrid(item))
+                        continue;
 
                 end = item;
                 break;

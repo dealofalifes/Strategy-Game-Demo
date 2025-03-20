@@ -209,7 +209,10 @@ public class GridSystemController : MonoBehaviour, IGridSystem
         Vector2Int doorPos = Helper.FindDoorPosForBarrack(_position, _productionModel);
 
         if (isBarrack)
+        {
             _GridElements[doorPos.x, doorPos.y].SetOccupied(_productionModel._ProductionID);
+            _GridElements[doorPos.x, doorPos.y].SetNewState(GridElementState.BarrackDoor);
+        }
 
         return true;
     }

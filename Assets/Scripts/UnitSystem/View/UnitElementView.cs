@@ -22,7 +22,9 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [Header("Active States & DEBUG")]
     [SerializeField] private List<UnitElementState> _ElementStates;
     [SerializeField] private List<GridElementView> _CurrentPath;
+    [SerializeField] private GridElementView _Target;
 
+    private bool _HasTarget;
     private bool _Targetted;
     private bool _Dead;
     private Coroutine _MoveCoroutine;
@@ -32,7 +34,7 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
     public event Action<UnitElementView> OnClickedLeft;
     public event Action<UnitElementView> OnClickedRight;
     public event Action<UnitElementView> OnDead;
-    public event Action OnStepUpdate;
+    public event Action<List<GridElementView>, UnitElementView, GridElementView> OnStepUpdate;
 
     private void Start()
     {
@@ -42,6 +44,7 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
     public void SetData(UnitModel _unitModel, UnitElementModel _unitElementModel)
     {
         _UnitHealthFiller.fillAmount = 1;
+        _HasTarget = false;
         _Targetted = false;
         _Dead = false;
 
@@ -130,35 +133,35 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     public void OnGridUpdate(List<UnitElementView> _myUnits)
     {
-        int length = _CurrentPath.Count;
-        int removeIndex = 999999;
-        for (int i = 0; i < length; i++)
-        {
-            Vector2Int currentPoint = new(_CurrentPath[i].GetData().Get_X(), _CurrentPath[i].GetData().Get_Y());
-            foreach (var item in _myUnits)
-            {
-                if (item == this)
-                    continue;
+        //int length = _CurrentPath.Count;
+        //int removeIndex = 999999;
+        //for (int i = 0; i < length; i++)
+        //{
+        //    Vector2Int currentPoint = new(_CurrentPath[i].GetData().Get_X(), _CurrentPath[i].GetData().Get_Y());
+        //    foreach (var item in _myUnits)
+        //    {
+        //        if (item == this)
+        //            continue;
 
-                if (item.GetUnitElementModelData().GetCurrentPosition() == currentPoint)
-                {
-                    removeIndex = i;
-                    break;
-                }
-            }
+        //        if (item.GetUnitElementModelData().GetCurrentPosition() == currentPoint)
+        //        {
+        //            removeIndex = i;
+        //            break;
+        //        }
+        //    }
 
-            if (_CurrentPath[i].IsOccupied())
-            {
-                removeIndex = i;
-                break;
-            }
-        }
+        //    if (_CurrentPath[i].IsOccupied())
+        //    {
+        //        removeIndex = i;
+        //        break;
+        //    }
+        //}
 
-        for (int i = length - 1; i >= removeIndex; i--)
-        {
-            _CurrentPath[i].EndState(GridElementState.OnNavigation);
-            _CurrentPath.RemoveAt(i);
-        }
+        //for (int i = length - 1; i >= removeIndex; i--)
+        //{
+        //    _CurrentPath[i].EndState(GridElementState.OnNavigation);
+        //    _CurrentPath.RemoveAt(i);
+        //}
     }
 
     public void StartMove(List<GridElementView> _path)
@@ -175,16 +178,28 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     IEnumerator Move(IDamagable _target = null)
     {
+        _HasTarget = _target != null;
+        if(_CurrentPath.Count > 0)
+            _Target = _CurrentPath[_CurrentPath.Count - 1];
+
         float moveSpeed = 300f;
 
         while (_CurrentPath.Count > 0)
         {
             _UnitElementModel.SetCurrentPosition(new(_CurrentPath[0].GetData().Get_X(), _CurrentPath[0].GetData().Get_Y()));
 
-            OnStepBegins(); //The soldier entered in e new block, let's refresh if still canPlace the building
-
             Vector3 worldTargetPoint = _CurrentPath[0].transform.position;
             Vector3 localTargetPoint = transform.parent.transform.InverseTransformPoint(worldTargetPoint);
+
+            OnStepBegins(); //The soldier entered in e new block, let's refresh if still canPlace the building
+
+            if (_CurrentPath.Count == 0)
+            {
+                Debug.Log("Stopped", transform);
+                transform.position = worldTargetPoint;
+                _target = null;
+                break;
+            }
 
             while (Vector2.Distance(transform.localPosition, localTargetPoint) > 0.01f)
             {
@@ -197,6 +212,7 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
             _CurrentPath[0].EndState(GridElementState.OnNavigation);
             _CurrentPath.RemoveAt(0);
 
+            Debug.Log("_CurrentPath count" + _CurrentPath.Count, transform);
             yield return new WaitForEndOfFrame();
         }
 
@@ -204,6 +220,8 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
         {
             _target.TakeDamage(_UnitModel.Damage);
         }
+
+        _HasTarget = false;
     }
 
     public void SetTarget(List<GridElementView> _path, IDamagable _target)
@@ -225,7 +243,7 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
         foreach (var item in _CurrentPath)
             item.SetNewState(GridElementState.OnNavigation);
 
-        OnStepUpdate.Invoke();
+        OnStepUpdate.Invoke(_CurrentPath, this, _Target);
     }
 
     public void TakeDamage(float _damage)
@@ -263,6 +281,11 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
         _Targetted = true;
     }
 
+    public void SetNewPath(List<GridElementView> _path)
+    {
+        _CurrentPath = _path;
+    }
+
     IEnumerator UpdateHealthFiller(float _currentRatio, float _targetRatio)
     {
         float elapsedTime = 0f;
@@ -277,6 +300,11 @@ public class UnitElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
 
         _UnitHealthFiller.fillAmount = _targetRatio;
+    }
+
+    public bool UnitHasTarget()
+    {
+        return _HasTarget;
     }
 
     public Vector2Int GetPosition()
