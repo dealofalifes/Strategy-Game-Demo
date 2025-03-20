@@ -12,7 +12,7 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: DefaultCompany
+  companyName: Panteon
   productName: Strategy Game Demo
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
@@ -671,8 +671,10 @@ PlayerSettings:
   scriptingDefineSymbols: {}
   additionalCompilerArguments: {}
   platformArchitecture: {}
-  scriptingBackend: {}
-  il2cppCompilerConfiguration: {}
+  scriptingBackend:
+    Standalone: 1
+  il2cppCompilerConfiguration:
+    Standalone: 2
   managedStrippingLevel:
     EmbeddedLinux: 1
     GameCoreScarlett: 1

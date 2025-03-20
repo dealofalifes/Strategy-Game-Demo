@@ -10,7 +10,6 @@ public class BuildingSystemView : MonoBehaviour
     [SerializeField] private Transform _BarracksContainer;
     [SerializeField] private Transform _WatchtowersContainer;
     [SerializeField] private Transform _FarmAreasContainer;
-    [SerializeField] private Transform _SoldiersContainer;
 
     [Header("DEBUG")]
     [SerializeField] public BuildingModel _SelectedBuilding;
@@ -86,11 +85,10 @@ public class BuildingSystemView : MonoBehaviour
             (_cellSize.y * productionSize.y) + ((productionSize.y - 1) * gridSpace.y));
 
         BuildingElementView buildingElementView = newBuildingElement.GetComponent<BuildingElementView>();
-        BuildingModel currentBuildingModel = new BuildingModel()
-        {
-            _ProductionID = _SelectedProduction._ProductionID,
-            _StartGrid = _position,
-        };
+
+        Stats buildingStats = new Stats(_SelectedProduction._MaxHealth);
+        BuildingModel currentBuildingModel = new BuildingModel(_SelectedProduction._ProductionID, productionSize, _position, buildingStats);
+
         buildingElementView.SetData(currentBuildingModel);
 
         CancelBuildingMode();
@@ -104,6 +102,7 @@ public class BuildingSystemView : MonoBehaviour
         {
             if (!item.activeSelf)
             {
+                item.SetActive(true);
                 return item;
             }
         }

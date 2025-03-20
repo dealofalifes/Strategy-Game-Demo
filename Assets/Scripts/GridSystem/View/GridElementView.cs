@@ -19,8 +19,10 @@ public class GridElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [Header("Active States & DEBUG")]
     [SerializeField] private List<GridElementState> _ElementStates;
 
+    public event Action<GridElementView> OnHover;
     public event Action<Vector2Int> OnEnter;
-    public event Action<Vector2Int, GridElementView> OnClicked;
+    public event Action<Vector2Int, GridElementView> OnClickedLeft;
+    public event Action<GridElementView> OnClickedRight;
     public void SetData(GridElementModel _data)
     {
         _ElementStates = new();
@@ -80,11 +82,15 @@ public class GridElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         OnEnter.Invoke(new(_Data.Get_X(), _Data.Get_Y()));
         if (_ElementStates.Count < 1)
+        {
+            OnHover.Invoke(this);
             SetNewState(GridElementState.Hovered);
+        }
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
+        OnHover.Invoke(null);
         EndState(GridElementState.Hovered);
     }
 
@@ -92,7 +98,16 @@ public class GridElementView : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            OnClicked.Invoke(new(_Data.Get_X(), _Data.Get_Y()), this);
+            OnClickedLeft.Invoke(new(_Data.Get_X(), _Data.Get_Y()), this);
         }
+        else if (eventData.button == PointerEventData.InputButton.Right)
+        {
+            OnClickedRight.Invoke(this);
+        }
+    }
+
+    public GridElementModel GetData()
+    {
+        return _Data;
     }
 }

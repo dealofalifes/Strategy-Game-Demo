@@ -2,8 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
-public class GridSystemController : MonoBehaviour
+public class GridSystemController : MonoBehaviour, IGridSystem
 {
     [Tooltip("Grid System View Component for this Controller")]
     [Header("View Class")]
@@ -15,10 +16,16 @@ public class GridSystemController : MonoBehaviour
     [HideInInspector] [SerializeField] private Vector2Int _CellSize;
     [SerializeField] private GridElementView[,] _GridElements;
 
+    [HideInInspector][SerializeField] private GridElementView _OnGridElement;
+    [HideInInspector][SerializeField] private Vector2Int _LastPosition;
+
+    public event Action<GridElementView> OnClickedRight;
+
+    //---
+    private IBuildingSystem _BuildingSystem;
+    private IUnitSystem _UnitSystem;
     private void Awake()
     {
-        ServiceLocator.Instance.Register(this);
-
         if (!_GridCreated)
         {
             Debug.LogWarning("There is no gridsize data entered. So map will be created with default size 25x25.");
@@ -36,10 +43,18 @@ public class GridSystemController : MonoBehaviour
 
             foreach (var gridElement in _GridElements)
             {
+                gridElement.OnHover += OnHoverGridElement;
                 gridElement.OnEnter += OnEnteredAGrid;
-                gridElement.OnClicked += OnClickedAGrid;
+                gridElement.OnClickedLeft += OnClickedLeftAGrid;
+                gridElement.OnClickedRight += OnClickedRightAGrid;
             }
         }
+    }
+
+    public void Initialize(IBuildingSystem _buildingSystem, IUnitSystem _unitSystem)
+    {
+        _BuildingSystem = _buildingSystem;
+        _UnitSystem = _unitSystem;
     }
 
     public void CreateGridArea(Vector2Int _gridSize, Vector2Int _cellSize)
@@ -63,21 +78,34 @@ public class GridSystemController : MonoBehaviour
         //Door position for Barrack to be able to create Soldier
         Vector2Int doorPos = Helper.FindDoorPosForBarrack(_position, _productionModel);
 
-        for (int x = 0; x < _productionModel._ProductionSize.x; x++)
+        if (!_UnitSystem.IsValidGrid(new(doorPos.x, doorPos.y)))
         {
-            for (int y = 0; y < _productionModel._ProductionSize.y; y++)
-            {
-                Vector2Int gridPos = new Vector2Int(_position.x + x, _position.y + y);
+            canPlace = false;
+        }
 
-                if (gridPos.x >= _GridSize.x || gridPos.y >= _GridSize.y || gridPos.x < 0 || gridPos.y < 0)
+        if (canPlace)
+        {
+            for (int x = 0; x < _productionModel._ProductionSize.x; x++)
+            {
+                for (int y = 0; y < _productionModel._ProductionSize.y; y++)
                 {
-                    //Set NotBuildable if it extends the limits.
-                    canPlace = false;
-                }
-                else
-                {
-                    //If it is occupied also set as NotBuildable
-                    if (_GridElements[gridPos.x, gridPos.y].IsOccupied())
+                    Vector2Int gridPos = new Vector2Int(_position.x + x, _position.y + y);
+
+                    if (gridPos.x >= _GridSize.x || gridPos.y >= _GridSize.y || gridPos.x < 0 || gridPos.y < 0)
+                    {
+                        //Set NotBuildable if it extends the limits.
+                        canPlace = false;
+                    }
+                    else
+                    {
+                        //If it is occupied also set as NotBuildable
+                        if (_GridElements[gridPos.x, gridPos.y].IsOccupied())
+                        {
+                            canPlace = false;
+                        }
+                    }
+
+                    if (!_UnitSystem.IsValidGrid(new(gridPos.x, gridPos.y)))
                     {
                         canPlace = false;
                     }
@@ -129,16 +157,38 @@ public class GridSystemController : MonoBehaviour
         return canPlace;
     }
 
-    private void OnEnteredAGrid(Vector2Int _position)
+    private void OnHoverGridElement(GridElementView _gridElementView)
     {
-        if (ServiceLocator.Instance.Get<BuildingSystemController>().IsBuildingModeActive())
-            ServiceLocator.Instance.Get<BuildingSystemController>().ChecktoPlaceBuilding(new(_position.x, _position.y));
+        _OnGridElement = _gridElementView;
+        if(_OnGridElement != null)
+            _LastPosition = new(_OnGridElement.GetData().Get_X(), _OnGridElement.GetData().Get_Y());
     }
 
-    private void OnClickedAGrid(Vector2Int _position, GridElementView _gridElement)
+    private void OnEnteredAGrid(Vector2Int _position)
     {
-        if (ServiceLocator.Instance.Get<BuildingSystemController>().IsBuildingModeActive())
-            ServiceLocator.Instance.Get<BuildingSystemController>().PlaceBuilding(_position, _gridElement);
+        if (_BuildingSystem.IsBuildingModeActive)
+        {
+            _LastPosition = _position;
+            _BuildingSystem.ChecktoPlaceBuilding(new(_position.x, _position.y));
+        }
+    }
+
+    public void OnRechecktoPlaceBuilding()
+    {
+        if (_BuildingSystem.IsBuildingModeActive)
+            _BuildingSystem.ChecktoPlaceBuilding(_LastPosition);
+    }
+
+    private void OnClickedLeftAGrid(Vector2Int _position, GridElementView _gridElement)
+    {
+        if (_BuildingSystem.IsBuildingModeActive)
+            _BuildingSystem.PlaceBuilding(_position, _gridElement);
+    }
+
+    private void OnClickedRightAGrid(GridElementView _gridElement)
+    {
+        if (!_BuildingSystem.IsBuildingModeActive)
+            OnClickedRight.Invoke(_gridElement);
     }
 
     public bool PlaceBuilding(BuildingModel _building, ProductionModel _productionModel, Vector2Int _position)
@@ -169,6 +219,17 @@ public class GridSystemController : MonoBehaviour
         _View.ResetBuildingStates();
     }
 
+    public GridElementView IsValidGrid(Vector2Int _pos)
+    {
+        if (_pos.x < 0 || _pos.y < 0 || _pos.x >= _GridSize.x || _pos.y >= _GridSize.y)
+            return null;
+
+        if (_GridElements[_pos.x, _pos.y].IsOccupied())
+            return null;
+
+        return _GridElements[_pos.x, _pos.y];
+    }
+
     public Vector2Int GetGridSize()
     {
         return _GridSize;
@@ -177,5 +238,32 @@ public class GridSystemController : MonoBehaviour
     public Vector2Int GetCellSize()
     {
         return _CellSize;
+    }
+
+    public void SetGridsFree(List<Vector2Int> _gridPositions)
+    {
+        foreach (var item in _gridPositions)
+        {
+            GridElementView currentGrid = GetGridElementViewByPosition(item);
+            currentGrid.SetOccupied(0);
+        }
+    }
+
+    public GridElementView GetGridElementViewByPosition(Vector2Int _pos)
+    {
+        foreach (var item in _GridElements)
+        {
+            if (item.GetData().Get_X() == _pos.x && item.GetData().Get_Y() == _pos.y)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    public bool IsOnGridElement()
+    {
+        return _OnGridElement != null;
     }
 }

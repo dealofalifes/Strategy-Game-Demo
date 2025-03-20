@@ -5,7 +5,7 @@ using UnityEngine;
 [System.Serializable]
 public class BarrackModel : ProductionModel
 {
-    public int _SoldierLevel; //Level of soldier to produce
+    public int _SoldierID; //ID of soldier to produce
 
     public BarrackModel()
     {
@@ -14,6 +14,6 @@ public class BarrackModel : ProductionModel
 
     public BarrackModel(BarrackModel _model) : base(_model)
     {
-        _SoldierLevel = _model._SoldierLevel;
+        _SoldierID = _model._SoldierID;
     }
 }
