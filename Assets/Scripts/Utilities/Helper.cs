@@ -12,26 +12,29 @@ public static class Helper
         return new Vector2Int(_position.x + Mathf.Max(0, offset), _position.y + _barrack._ProductionSize.y);
     }
 
-    public static Vector2Int FindClosestEdgePoint(Vector2Int start, Vector2Int targetPosition, Vector2Int targetSize)
+    public static List<Vector2Int> FindClosestEdgePoint(Vector2Int start, Vector2Int targetPosition, Vector2Int targetSize)
     {
         List<Vector2Int> edgePoints = new List<Vector2Int>();
 
-        int xMin = targetPosition.x;
-        int xMax = targetPosition.x + targetSize.x - 1;
-        int yMin = targetPosition.y;
-        int yMax = targetPosition.y + targetSize.y - 1;
+        int xMin = targetPosition.x - 1;
+        int xMax = targetPosition.x + targetSize.x;
+        int yMin = targetPosition.y - 1;
+        int yMax = targetPosition.y + targetSize.y;
 
+        // Add all edge points (including corners)
         for (int x = xMin; x <= xMax; x++)
         {
-            edgePoints.Add(new Vector2Int(x, yMin));
-            edgePoints.Add(new Vector2Int(x, yMax));
-        }
-        for (int y = yMin; y <= yMax; y++)
-        {
-            edgePoints.Add(new Vector2Int(xMin, y));
-            edgePoints.Add(new Vector2Int(xMax, y));
+            edgePoints.Add(new Vector2Int(x, yMin));  // Top edge
+            edgePoints.Add(new Vector2Int(x, yMax));  // Bottom edge
         }
 
-        return edgePoints.OrderBy(point => Vector2.Distance(start, point)).First();
+        for (int y = yMin; y <= yMax; y++)
+        {
+            edgePoints.Add(new Vector2Int(xMin, y));  // Left edge
+            edgePoints.Add(new Vector2Int(xMax, y));  // Right edge
+        }
+
+        // Return the edge point closest to the start position
+        return edgePoints.OrderBy(point => Vector2Int.Distance(start, point)).ToList();
     }
 }

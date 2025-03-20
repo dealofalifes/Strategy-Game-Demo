@@ -210,8 +210,30 @@ public class UnitSystemController : MonoBehaviour, IUnitSystem
         if (currentUnit != null)
         {
             Vector2Int start = currentUnit.GetUnitElementModelData().GetCurrentPosition();
-            Vector2Int end = Helper.FindClosestEdgePoint(start, _target.GetPosition(), _target.GetSize());
+            Vector2Int end = Vector2Int.zero;
+            List<Vector2Int> endPoints = Helper.FindClosestEdgePoint(start, _target.GetPosition(), _target.GetSize());
 
+            foreach (var item in endPoints)
+            {
+                Debug.Log(item);
+            }
+            foreach (var item in endPoints)
+            {
+                if (_GridSystem.GetGridElementViewByPosition(item).IsOccupied())
+                    continue;
+
+                if (!IsValidGrid(item))
+                    continue;
+
+                end = item;
+                break;
+            }
+
+            if (end == Vector2Int.zero)
+            {
+                OnUnitStartMove(_GridSystem.GetGridElementViewByPosition(endPoints[0]));
+                return;
+            }
             GridElementView startGridElement = _GridSystem.GetGridElementViewByPosition(start);
             GridElementView endGridElement = _GridSystem.GetGridElementViewByPosition(end);
 
